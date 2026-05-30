@@ -1,84 +1,183 @@
 # 🤖 Agente de IA para Triagem e Aprovação de Reembolsos
 
-Este projeto consiste em uma automação inteligente e autônoma construída na plataforma **n8n**. O objetivo principal é otimizar e automatizar o processo de atendimento ao cliente focado em solicitações de reembolso.
+Automação inteligente e autônoma construída na plataforma **n8n** para gerenciar solicitações de reembolso do início ao fim — sem intervenção humana na maioria dos casos.
 
-O fluxo atua como um "funcionário digital" que recebe os dados de um formulário preenchido pelo cliente, processa essas informações através de uma Inteligência Artificial e toma decisões de negócios baseadas em regras pré-estabelecidas, cruzando dados com o banco de dados da empresa.
-
-## ⚙️ Como o fluxo funciona?
-
-1. **Entrada de Dados:** O sistema recebe um alerta (via Webhook) toda vez que um cliente preenche o formulário solicitando reembolso.
-2. **Busca de Dados (Google Sheets):** O e-mail do cliente é utilizado para buscar o seu histórico de compras na base de dados da empresa.
-3. **Análise de IA:** O agente de Inteligência Artificial processa o comentário deixado no formulário para analisar o **sentimento** do cliente (Positivo, Neutro, Negativo ou Muito Negativo) e calcula automaticamente se o pedido está dentro do prazo de garantia de 7 dias.
-4. **Tomada de Decisão (Roteamento):**
-   * **Aprovação Automática:** Se estiver no prazo, o reembolso é aprovado.
-   * **Escalonamento Financeiro:** Compras acima de R$ 3.000,00 fora do prazo são enviadas para análise manual da gerência.
-   * **Gestão de Crise:** Se o cliente for classificado com sentimento "Muito Negativo" (agressivo, ameaças de processo/Procon), o atendimento automatizado é suspenso e a gerência é acionada imediatamente.
-5. **Comunicação:** O sistema dispara e-mails atualizando o cliente sobre o status e envia alertas críticos via Telegram para a equipe responsável.
-
-![Arquitetura do Fluxo](workflow.png)
+> **Versão atual:** O gatilho do fluxo é um **e-mail recebido via Gmail**. Ao receber um e-mail de pedido de reembolso, o agente lê a mensagem, cruza os dados com a planilha da empresa e toma a decisão sozinho.
 
 ---
 
-## 🚀 Como instalar e rodar (Usando Docker)
+## 📌 O que esse projeto faz?
 
-Para facilitar os testes e garantir que o projeto rode em qualquer sistema operacional sem conflitos, a infraestrutura foi empacotada utilizando **Docker**.
+Quando um cliente envia um e-mail pedindo reembolso, o agente:
+
+1. **Lê e interpreta** o e-mail recebido (extrai nome, produto, motivo e sentimento do cliente)
+2. **Busca o cliente** na planilha do Google Sheets pelo e-mail do remetente
+3. **Toma uma decisão** com base em regras de negócio:
+   - ✅ **Dentro do prazo (≤ 7 dias):** reembolso aprovado automaticamente
+   - ⚠️ **Fora do prazo + alto valor (> R$ 3.000):** escalado para gerência via Telegram
+   - ❌ **Fora do prazo + baixo valor:** rejeição educada por e-mail
+   - 🔥 **Cliente agressivo (sentimento "Muito Negativo"):** atendimento suspenso, alerta crítico para gerência via Telegram
+   - ❓ **Cliente não encontrado na base:** e-mail solicitando mais informações
+4. **Responde ao cliente** com um e-mail formatado e personalizado de acordo com o cenário
+
+---
+
+## 🗺️ Arquitetura do Fluxo
+
+```
+[Gmail Trigger]
+      │
+      ▼
+[AI Agent] ──usa──> [Google Sheets Tool] (busca o cliente)
+      │
+      ▼
+[Structured Output Parser] → JSON estruturado
+      │
+      ▼
+[If: cliente encontrado?]
+  ├── NÃO → [Email: solicitar mais informações]
+  └── SIM
+        │
+        ▼
+  [If: dentro do prazo? (≤ 7 dias)]
+    ├── SIM → [Email: Reembolso Aprovado ✅]
+    └── NÃO
+          │
+          ▼
+    [If: gastou > R$ 3.000?]
+      ├── SIM → [Email: caso em análise] + [Telegram: alerta gerência ⚠️]
+      └── NÃO
+            │
+            ▼
+      [If: sentimento POSITIVO / NEUTRO / NEGATIVO?]
+        ├── SIM → [Email: reembolso negado ❌]
+        └── NÃO (MUITO_NEGATIVO) → [Email: suspenso] + [Telegram: alerta crítico 🔥]
+```
+
+---
+
+## 🚀 Como instalar e rodar
 
 ### Pré-requisitos
-* Ter o [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado na sua máquina.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado
 
-### Passo a Passo
-1. Faça o clone ou baixe os arquivos deste repositório para o seu computador.
-2. Abra o terminal na pasta onde os arquivos foram baixados e rode o comando abaixo para iniciar o servidor do n8n em segundo plano:
-   ```bash
-   docker compose up -d
-   ```
-3. Abra o seu navegador e acesse: `http://localhost:5678`
-4. Crie uma conta de administrador local (apenas para o seu ambiente).
-5. No menu esquerdo, vá em **Workflows** > **Add Workflow** > Clique nos três pontinhos no canto superior direito > **Import from File**.
-6. Selecione o arquivo `fluxo.json` contido neste repositório.
+### Passo a passo
 
----
+**1. Clone o repositório**
+```bash
+git clone https://github.com/stefano3938/fluxo-de-automacao-reembolso.git
+cd fluxo-de-automacao-reembolso
+```
 
-## 🔑 Configuração de Integrações e Credenciais
+**2. Suba o n8n com Docker**
+```bash
+docker compose up -d
+```
 
-Para que o agente de IA funcione na sua máquina, será necessário configurar as credenciais dos serviços que ele utiliza. Dentro do n8n, você poderá autenticar cada nó de acordo com as suas próprias contas.
+**3. Acesse o n8n no navegador**
+```
+http://localhost:5678
+```
 
-### 1. Banco de Dados (Google Sheets)
-* **Como foi usado:** Atua como o "banco de dados" da empresa para verificar o valor gasto pelo cliente e a data da última compra.
-* **Como configurar:** No nó *Google Sheets*, crie uma nova credencial do tipo **Google Sheets OAuth2 API**. Autentique com sua conta do Google e aponte o nó para uma planilha sua que contenha colunas como `nome_cliente`, `email_cliente`, `total_gasto_cliente` e `data_ultima_compra`.
+**4. Crie sua conta de administrador local** (só aparece na primeira vez)
 
-### 2. Inteligência Artificial (Modelo de Linguagem)
-* **Como foi usado:** O "cérebro" do agente. Ele lê as reclamações, extrai as informações estruturadas e faz a análise de sentimento.
-* **Como configurar:** O projeto original foi desenhado utilizando o modelo **Gemma-4** rodando via OpenAI node. No entanto, o fluxo é totalmente agnóstico. Ao abrir o nó `OpenAI Chat Model`, você pode inserir uma **API Key da OpenAI** (para usar o GPT-4o ou GPT-3.5) ou configurar as credenciais para rodar modelos locais (como o Llama 3 ou Gemma através do Ollama).
-
-### 3. Comunicação com Cliente (Gmail)
-* **Como foi usado:** Para o envio de notificações dinâmicas (Aprovação, Análise de Gerência ou Recusa).
-* **Como configurar:** No nó *Gmail*, crie uma credencial **Gmail OAuth2**. Faça login com sua conta do Google. *(Dica: Certifique-se de publicar o App no Google Cloud Console para que a credencial não expire em 7 dias).*
-
-### 4. Alertas Internos (Telegram)
-* **Como foi usado:** Utilizado para alertar a equipe de suporte ou gerência, em tempo real, sobre casos sensíveis (clientes que gastaram muito dinheiro ou clientes agressivos que exigem atenção humana urgente).
-* **Como configurar:** Crie um bot no Telegram falando com o `@BotFather`, pegue o Token gerado e crie a credencial no nó do Telegram. Insira o `Chat ID` do seu grupo de suporte na configuração do nó.
+**5. Importe o fluxo**
+- No menu lateral esquerdo, clique em **Workflows**
+- Clique em **Add Workflow**
+- Clique nos três pontinhos (⋯) no canto superior direito
+- Selecione **Import from File** e escolha o arquivo `fluxo_atualizado.json`
 
 ---
 
-## 🧪 Como simular o funcionamento
+## 🔑 Configurando as Credenciais
 
-Como a interface do formulário (front-end) não está inclusa para manter a aplicação leve, você pode simular o envio de um cliente disparando um teste diretamente para o Webhook do n8n.
+Após importar o fluxo, você precisará conectar suas próprias contas nos nós. Clique em cada nó indicado para configurar.
 
-1. No n8n, abra o fluxo e clique em **Test Workflow** (para deixar o nó do Webhook ouvindo).
-2. Abra o terminal e rode o comando abaixo (ou use ferramentas como Postman/Insomnia):
+### 1. 📧 Gmail (Trigger + Envio de E-mails)
+- **Nós afetados:** `Gmail Trigger`, todos os nós `Send a message`
+- **Tipo de credencial:** `Gmail OAuth2`
+- Autentique com a conta do Google que **receberá** os pedidos de reembolso
+- > ⚠️ **Importante:** Para que a credencial não expire em 7 dias, publique o app no [Google Cloud Console](https://console.cloud.google.com/) ou use uma conta de serviço.
 
-   ```bash
-   curl -X POST http://localhost:5678/webhook-test/3f475ea5-100f-4c97-a651-8a03265e868c \
-   -H "Content-Type: application/json" \
-   -d '{
-     "event": "reimbursement_request",
-     "data": {
-       "fullName": "Seu Nome",
-       "email": "email_cadastrado_na_sua_planilha@gmail.com",
-       "product": "Produto de Teste",
-       "comments": "Odiei o produto, quero meu dinheiro de volta agora ou vou processar a empresa!"
-     }
-   }'
-   ```
-*Experimente mudar o teor do texto no campo `comments` para ver a IA alterando o roteamento da automação!*
+### 2. 📊 Google Sheets (Banco de Dados)
+- **Nó afetado:** `Get row(s) in sheet in Google Sheets`
+- **Tipo de credencial:** `Google Sheets OAuth2 API`
+- Aponte para uma planilha sua com as seguintes colunas obrigatórias:
+
+| Coluna | Descrição |
+|---|---|
+| `email_cliente` | E-mail usado na compra |
+| `nome_cliente` | Nome completo do cliente |
+| `total_gasto_cliente` | Valor total gasto (número) |
+| `data_ultima_compra` | Data da última compra (formato `YYYY-MM-DD`) |
+
+### 3. 🤖 Modelo de IA (LLM)
+- **Nó afetado:** `OpenAI Chat Model`
+- **Tipo de credencial:** `OpenAI API`
+- O fluxo foi desenvolvido usando o modelo **Gemma 4** via API compatível com OpenAI
+- Você pode trocar por qualquer modelo compatível:
+  - **OpenAI:** GPT-4o, GPT-4o-mini (basta inserir sua API Key)
+  - **Local (Ollama):** Llama 3, Gemma, Mistral — sem custo de API
+  - **Groq, Together AI, etc.:** qualquer provedor com endpoint no formato OpenAI
+
+### 4. 📲 Telegram (Alertas para Gerência)
+- **Nós afetados:** `Send a text message`, `Send a text message1`
+- **Tipo de credencial:** `Telegram API`
+- **Como configurar:**
+  1. No Telegram, fale com o [@BotFather](https://t.me/BotFather) e crie um bot com `/newbot`
+  2. Copie o **Token** gerado e cole na credencial do nó
+  3. Descubra seu **Chat ID** falando com o [@userinfobot](https://t.me/userinfobot)
+  4. Insira o Chat ID nos nós do Telegram
+
+---
+
+## 🧪 Como testar
+
+**1.** Com o fluxo importado e as credenciais configuradas, **ative o workflow** pelo toggle no canto superior direito do n8n.
+
+**2.** Envie um e-mail para a conta do Gmail configurada no `Gmail Trigger` pedindo um reembolso. Exemplo:
+
+> *"Olá, comprei o Curso de Marketing Digital há 3 dias e gostaria de solicitar o reembolso. Obrigado."*
+
+**3.** O Gmail Trigger verifica novos e-mails a **cada minuto**. Em até 60 segundos, o fluxo será disparado.
+
+**4.** Experimente cenários diferentes:
+- E-mail de uma conta **que existe** na sua planilha vs. uma que **não existe**
+- Tom **educado** vs. **agressivo** no corpo do e-mail
+- Datas de compra **dentro e fora** do prazo de 7 dias
+
+---
+
+## 🛡️ Segurança: Por que o e-mail do remetente é a fonte de verdade?
+
+O agente foi instruído com uma **regra de segurança explícita**: ele usa **exclusivamente o endereço do remetente** (campo técnico do e-mail) para buscar o cliente na planilha — e ignora completamente qualquer e-mail mencionado dentro do corpo da mensagem. Isso evita ataques de engenharia social onde um cliente mal-intencionado escreve "solicito reembolso para o e-mail outrocliente@email.com" tentando disparar uma ação em nome de outra pessoa.
+
+---
+
+## 🗂️ Estrutura do Repositório
+
+```
+.
+├── fluxo_atualizado.json   # Fluxo do n8n para importar
+├── docker-compose.yaml     # Infraestrutura Docker para rodar o n8n
+└── README.md               # Este arquivo
+```
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+| Tecnologia | Papel no projeto |
+|---|---|
+| [n8n](https://n8n.io/) | Plataforma de automação (low-code) |
+| Google Gmail | Trigger de entrada + envio de respostas |
+| Google Sheets | Banco de dados dos clientes |
+| LLM (Gemma / GPT / Ollama) | Extração de dados e análise de sentimento |
+| Telegram Bot API | Alertas em tempo real para a equipe |
+| Docker | Infraestrutura para rodar o n8n localmente |
+
+---
+
+## 📄 Licença
+
+Este projeto é de código aberto para fins de estudo e portfólio. Fique à vontade para clonar, adaptar e usar como base para seus próprios projetos.
