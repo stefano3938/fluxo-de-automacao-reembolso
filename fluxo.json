@@ -1,5 +1,5 @@
 {
-  "name": "My workflow 2",
+  "name": "fluxo",
   "nodes": [
     {
       "parameters": {
@@ -290,8 +290,7 @@
     },
     {
       "parameters": {
-        "chatId": "[cole aqui o id do seu chat] (pode ser obtido usando o bot Get ID bot)",
-        "text": "=Status: Cliente passou do prazo, mas tem alto valor gasto. Cliente: {{ $('AI Agent').item.json.output.nome_completo }} E-mail: {{ $('AI Agent').item.json.output.email }} Produto:  {{ $('AI Agent').item.json.output.produto_reembolso }} Dados da Análise:  Total Gasto: R$ {{ $('AI Agent').item.json.output.total_gasto_cliente }}  Dias desde a compra: {{ $('AI Agent').item.json.output.dias_desde_compra }}  Sentimento do Cliente: {{ $('AI Agent').item.json.output.sentimento }}  Comentário: \"{{ $('AI Agent').item.json.output.comentario }}\"  O cliente solicitou reembolso, mas a compra está fora da garantia de 7 dias. Como o gasto ultrapassou R$ 3.000,00, o caso foi escalado para sua análise de exceção.  Favor verificar e nos dar um retorno.",
+        "text": "=Status: Cliente com alto valor gasto solicitou exceção de prazo\nCliente: {{ $('AI Agent').item.json.output.nome_completo }}\nEmail: {{ $('AI Agent').item.json.output.email }}\nProduto: {{ $('AI Agent').item.json.output.produto_reembolso }}\n\nDados da Análise:\nTotal Gasto: R$ {{ $('AI Agent').item.json.output.total_gasto_cliente }}\nDias desde a compra: {{ $('AI Agent').item.json.output.dias_desde_compra }}\nSentimento: {{ $('AI Agent').item.json.output.sentimento.replace(/_/g, ' ') }}\nComentário: {{ $('AI Agent').item.json.output.comentario.replace(/[*_`\\[\\]()]/g, '') }}\n\nAtenção: O cliente solicitou reembolso fora da garantia de 7 dias. Como o gasto ultrapassou 3000 reais, o caso foi escalado para sua análise. Favor verificar e nos dar um retorno.",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -364,8 +363,7 @@
     },
     {
       "parameters": {
-        "chatId": "[cole aqui o id do seu chat] (pode ser obtido usando o bot Get ID bot)",
-        "text": "=🔥 ALERTA: Caso Crítico - Gerência Necessária\n\nStatus: Cliente Problemático (Agressivo/Ofensivo)\nAção: O atendimento pelo suporte foi suspenso. Requer sua intervenção direta.\n\nCliente: {{ $('AI Agent').item.json.output.nome_completo }}\nE-mail: {{ $('AI Agent').item.json.output.email }}\nProduto: {{ $('AI Agent').item.json.output.produto_reembolso }}\n\nDados de Risco:\n\nSentimento: Muito negativo\n\nTotal Gasto: R$ {{ $('AI Agent').item.json.output.total_gasto_cliente }}\n\nDias desde a compra: {{ $('AI Agent').item.json.output.dias_desde_compra }}\n\nComentário do Cliente: \"{{ $('AI Agent').item.json.output.comentario }}\"\n\nMotivo do Escalonamento:\nO cliente ultrapassou os limites de respeito com a equipe e a comunicação tornou-se insustentável. O suporte foi pausado e a bola está com você para decidir como prosseguir (seja para uma abordagem de conciliação ou finalização definitiva do acesso).",
+        "text": "=🔥 ALERTA: Caso Crítico - Gerência Necessária\n\nStatus: Cliente Problemático - Agressivo ou Ofensivo\nAção: O atendimento pelo suporte foi suspenso. Requer sua intervenção direta.\n\nCliente: {{ $('AI Agent').item.json.output.nome_completo }}\nE-mail: {{ $('AI Agent').item.json.output.email }}\nProduto: {{ $('AI Agent').item.json.output.produto_reembolso }}\n\nDados de Risco:\nSentimento: Muito negativo\nTotal Gasto: R$ {{ $('AI Agent').item.json.output.total_gasto_cliente }}\nDias desde a compra: {{ $('AI Agent').item.json.output.dias_desde_compra }}\nComentário do Cliente: {{ $('AI Agent').item.json.output.comentario.replace(/[*_`\\[\\]()]/g, '') }}\n\nMotivo do Escalonamento:\nO cliente ultrapassou os limites de respeito com a equipe e a comunicação tornou-se insustentável. O suporte foi pausado e a bola está com você para decidir como prosseguir, seja para uma abordagem de conciliação ou finalização definitiva do acesso.",
         "additionalFields": {
           "appendAttribution": false
         }
@@ -700,7 +698,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "1d81a457-c3b9-42bb-9c6e-156d4ad906cf",
+  "versionId": "44840f84-394c-48b2-ae31-536b6f3c3789",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6baad86031177774eed9b925e222d8bb9bb7ef6e07dd1c81006896bf843ca993"
