@@ -24,35 +24,34 @@ Quando um cliente envia um e-mail pedindo reembolso, o agente:
 
 ## 🗺️ Arquitetura do Fluxo
 
-```
-[Gmail Trigger]
+```text
+[Novo Ticket (Gmail)]
       │
       ▼
-[AI Agent] ──usa──> [Google Sheets Tool] (busca o cliente)
+[Agente Analista de Suporte] ──usa──> [Consulta: Base de Clientes (Sheets)]
       │
       ▼
-[Structured Output Parser] → JSON estruturado
+[Estruturador de Dados (JSON)]
       │
       ▼
-[If: cliente encontrado?]
-  ├── NÃO → [Email: solicitar mais informações]
+[Validação: Cliente Cadastrado?]
+  ├── NÃO → [Solicitação de Dados Pendentes]
   └── SIM
         │
         ▼
-  [If: dentro do prazo? (≤ 7 dias)]
-    ├── SIM → [Email: Reembolso Aprovado ✅]
+  [Validação: Elegibilidade de Garantia?]
+    ├── SIM (≤ 7 dias) → [Aprovação Automática]
     └── NÃO
           │
           ▼
-    [If: gastou > R$ 3.000?]
-      ├── SIM → [Email: caso em análise] + [Telegram: alerta gerência ⚠️]
+    [Filtro: Cliente High-Ticket?]
+      ├── SIM (> R$ 3.000) → [Aviso de Análise Gerencial] + [Alerta High-Ticket]
       └── NÃO
             │
             ▼
-      [If: sentimento POSITIVO / NEUTRO / NEGATIVO?]
-        ├── SIM → [Email: reembolso negado ❌]
-        └── NÃO (MUITO_NEGATIVO) → [Email: suspenso] + [Telegram: alerta crítico 🔥]
-```
+      [Filtro: Risco de Agressividade?]
+        ├── SIM (Pos/Neu/Neg) → [Recusa Fora da Garantia]
+        └── NÃO (Muito Negativo) → [Suspensão de Atendimento] + [Alerta Crítico (Conflito)]
 
 ---
 
@@ -85,7 +84,7 @@ http://localhost:5678
 - No menu lateral esquerdo, clique em **Workflows**
 - Clique em **Add Workflow**
 - Clique nos três pontinhos (⋯) no canto superior direito
-- Selecione **Import from File** e escolha o arquivo `fluxo_atualizado.json`
+- Selecione **Import from File** e escolha o arquivo `fluxo.json`
 
 ---
 
@@ -100,7 +99,7 @@ Após importar o fluxo, você precisará conectar suas próprias contas nos nós
 - > ⚠️ **Importante:** Para que a credencial não expire em 7 dias, publique o app no [Google Cloud Console](https://console.cloud.google.com/) ou use uma conta de serviço.
 
 ### 2. 📊 Google Sheets (Banco de Dados)
-- **Nó afetado:** `Get row(s) in sheet in Google Sheets`
+- **Nó afetado:** `Consulta: Base de Clientes (Sheets)`
 - **Tipo de credencial:** `Google Sheets OAuth2 API`
 - Aponte para uma planilha sua com as seguintes colunas obrigatórias:
 
@@ -121,7 +120,7 @@ Após importar o fluxo, você precisará conectar suas próprias contas nos nós
   - **Groq, Together AI, etc.:** qualquer provedor com endpoint no formato OpenAI
 
 ### 4. 📲 Telegram (Alertas para Gerência)
-- **Nós afetados:** `Send a text message`, `Send a text message1`
+- **Nós afetados:** `Alerta High-Ticket, Alerta Crítico (Conflito)`
 - **Tipo de credencial:** `Telegram API`
 - **Como configurar:**
   1. No Telegram, fale com o [@BotFather](https://t.me/BotFather) e crie um bot com `/newbot`
@@ -158,7 +157,7 @@ O agente foi instruído com uma **regra de segurança explícita**: ele usa **ex
 
 ```
 .
-├── fluxo_atualizado.json   # Fluxo do n8n para importar
+├── fluxo.json   # Fluxo do n8n para importar
 ├── docker-compose.yaml     # Infraestrutura Docker para rodar o n8n
 └── README.md               # Este arquivo
 ```
